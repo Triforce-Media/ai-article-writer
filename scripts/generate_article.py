@@ -528,6 +528,38 @@ def sanitize_filename(title):
     return filename
 
 
+def get_unique_filepath(articles_dir, base_filename):
+    """Get a unique filepath, appending number if file exists."""
+    filepath = articles_dir / f"{base_filename}.md"
+    counter = 1
+    while filepath.exists():
+        filepath = articles_dir / f"{base_filename}_{counter}.md"
+        counter += 1
+    return filepath
+
+
+def format_error_message(error):
+    """Format better error messages for common issues."""
+    error_msg = str(error).lower()
+    
+    if "api key" in error_msg or "gemini_api_key" in error_msg or "authentication" in error_msg:
+        return "❌ Error: Invalid or missing GEMINI_API_KEY. Please check your API key configuration."
+    elif "quota" in error_msg or "rate limit" in error_msg or "429" in error_msg:
+        return "❌ Error: API quota exceeded or rate limit reached. Please try again later."
+    elif "permission" in error_msg or "403" in error_msg:
+        return "❌ Error: Permission denied. Check your API key permissions."
+    elif "not found" in error_msg or "404" in error_msg:
+        return "❌ Error: Resource not found. Check your YouTube URLs or API endpoints."
+    elif "timeout" in error_msg or "timed out" in error_msg:
+        return "❌ Error: Request timed out. The operation took too long. Please try again."
+    elif "network" in error_msg or "connection" in error_msg:
+        return "❌ Error: Network connection issue. Please check your internet connection."
+    elif "transcript" in error_msg or "youtube" in error_msg:
+        return f"❌ Error: {error}"
+    else:
+        return f"❌ Error: {error}"
+
+
 def main():
     parser = argparse.ArgumentParser(description='Generate article/post from YouTube transcripts')
     parser.add_argument('--url-1', required=True, help='YouTube URL 1')
@@ -564,10 +596,13 @@ def main():
     urls = [url for url in urls if url and url.strip()]
     
     if not urls:
-        print("Error: At least one YouTube URL is required", file=sys.stderr)
+        print("❌ Error: At least one YouTube URL is required", file=sys.stderr)
         sys.exit(1)
     
     print(f"📹 Processing {len(urls)} YouTube video(s)...\n")
+    
+    # Progress indicator: Step 1/4
+    print("📊 Progress: [1/4] Downloading transcripts...\n")
     
     # Download transcripts
     transcripts = []
@@ -583,10 +618,13 @@ def main():
             print(f"   Skipping this video and continuing...\n")
     
     if not transcripts:
-        print("Error: No transcripts were successfully downloaded", file=sys.stderr)
+        print("❌ Error: No transcripts were successfully downloaded", file=sys.stderr)
         sys.exit(1)
     
     print(f"\n✓ Successfully downloaded {len(transcripts)} transcript(s)\n")
+    
+    # Progress indicator: Step 2/4
+    print("📊 Progress: [2/4] Generating article content...\n")
     
     # Generate article (without title and without references)
     try:
@@ -600,40 +638,60 @@ def main():
             args.enable_research
         )
     except Exception as e:
-        print(f"Error generating article: {e}", file=sys.stderr)
+        print(format_error_message(e), file=sys.stderr)
         sys.exit(1)
     
     # Parse article response
     content, hashtags = parse_article_response(article_response)
     
+    # Progress indicator: Step 3/4
+    print("📊 Progress: [3/4] Generating title...\n")
+    
     # Generate title separately
     try:
         title = generate_title(content, args.article_type, args.audience, args.context)
     except Exception as e:
-        print(f"Error generating title: {e}", file=sys.stderr)
+        print(format_error_message(e), file=sys.stderr)
         # Fallback to default title if title generation fails
         title = f"{args.article_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-        print(f"Using fallback title: {title}")
+        print(f"⚠️  Using fallback title: {title}")
+    
+    # Progress indicator: Step 4/4
+    print("📊 Progress: [4/4] Generating references...\n")
     
     # Generate references separately
     try:
         references = generate_references(content, title, args.additional_info, args.article_type, args.audience)
     except Exception as e:
-        print(f"Error generating references: {e}", file=sys.stderr)
+        print(format_error_message(e), file=sys.stderr)
         # Fallback to empty references if generation fails
         references = "\n\n## References\n\n*References could not be generated.*"
-        print(f"Using fallback references section")
+        print(f"⚠️  Using fallback references section")
     
     # Create articles directory
     articles_dir = Path("articles")
     articles_dir.mkdir(exist_ok=True)
     
-    # Save article
+    # Save article with unique filename
     filename = sanitize_filename(title)
-    filepath = articles_dir / f"{filename}.md"
+    filepath = get_unique_filepath(articles_dir, filename)
     
-    # Format the article with title, content, references, and hashtags
-    article_content = f"# {title}\n\n"
+    # Build metadata
+    metadata = f"""---
+title: {title}
+article_type: {args.article_type}
+word_count_target: {args.word_count}
+audience: {args.audience}
+generated_date: {datetime.now().isoformat()}
+source_videos: {len(urls)}
+video_ids: {', '.join(video_ids)}
+research_enabled: {args.enable_research}
+---
+
+"""
+    
+    # Format the article with metadata, title, content, references, and hashtags
+    article_content = metadata + f"# {title}\n\n"
     article_content += content
     article_content += f"\n\n---\n\n## References\n\n{references}"
     if hashtags:
@@ -643,6 +701,8 @@ def main():
         f.write(article_content)
     
     print(f"\n✓ Article saved to: {filepath}")
+    if filepath.name != f"{filename}.md":
+        print(f"  Note: Filename adjusted to avoid duplicates")
     print(f"  Title: {title}")
     print(f"  References: {len(extract_links(references))} link(s)")
     print(f"  Hashtags: {', '.join(hashtags) if hashtags else 'None'}")
