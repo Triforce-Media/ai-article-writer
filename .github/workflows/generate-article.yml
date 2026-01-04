@@ -91,10 +91,33 @@ jobs:
           echo "Using Python: $($PYTHON_CMD --version)"
           echo "PYTHON_CMD=$PYTHON_CMD" >> $GITHUB_ENV
           
+          # Check if venv module is available
+          if ! $PYTHON_CMD -c "import venv" 2>/dev/null; then
+            echo "venv module not available, installing python3-venv..."
+            if command -v apt-get &> /dev/null; then
+              sudo apt-get update -qq
+              sudo apt-get install -y python3-venv
+            elif command -v yum &> /dev/null; then
+              sudo yum install -y python3-venv
+            else
+              echo "Error: Cannot install python3-venv. Please install it manually."
+              exit 1
+            fi
+          fi
+          
           # Create virtual environment
+          echo "Creating virtual environment..."
           $PYTHON_CMD -m venv venv
           
-          # Activate venv and upgrade pip (use venv's python directly)
+          # Verify venv was created
+          if [ ! -f "./venv/bin/python" ]; then
+            echo "Error: Virtual environment creation failed"
+            exit 1
+          fi
+          
+          echo "Virtual environment created successfully"
+          
+          # Upgrade pip (use venv's python directly)
           ./venv/bin/python -m pip install --upgrade pip
 
       - name: 📦 Install dependencies
