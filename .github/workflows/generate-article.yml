@@ -80,14 +80,17 @@ on:
         required: false
         type: choice
         options:
-          - Senior engineers and technical practitioners
-          - Software developers and engineers
-          - Product managers and business leaders
-          - Data scientists and ML engineers
-          - DevOps and infrastructure engineers
-          - General tech audience
-          - Students and beginners
-        default: Senior engineers and technical practitioners
+          - Technical professionals and engineers
+          - Business professionals and executives
+          - Entrepreneurs and startup founders
+          - Marketing and growth professionals
+          - Sales professionals and account managers
+          - HR and talent acquisition professionals
+          - Product managers and strategists
+          - Consultants and advisors
+          - Students and career changers
+          - General professional audience
+        default: Technical professionals and engineers
       enable_research:
         description: 'Enable additional research via Google Search'
         required: false

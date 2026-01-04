@@ -580,8 +580,8 @@ def main():
     parser.add_argument('--word-count', default='1000', 
                        choices=['500', '1000', '1500', '2000', '2500', '3000'],
                        help='Target word count (default: 1000)')
-    parser.add_argument('--audience', default='Senior engineers and technical practitioners',
-                       help='Target audience (default: Senior engineers and technical practitioners)')
+    parser.add_argument('--audience', default='Technical professionals and engineers',
+                       help='Target audience (default: Technical professionals and engineers)')
     parser.add_argument('--enable-research', type=lambda x: x.lower() == 'true', default=True,
                        help='Enable additional research (default: true)')
     parser.add_argument('--delay', type=int, default=15, help='Delay between transcript downloads in seconds (default: 15)')
