@@ -1,0 +1,121 @@
+name: Generate Article from YouTube Transcripts
+
+on:
+  workflow_dispatch:
+    inputs:
+      youtube_url_1:
+        description: 'YouTube URL 1'
+        required: true
+        type: string
+      youtube_url_2:
+        description: 'YouTube URL 2 (optional)'
+        required: false
+        type: string
+      youtube_url_3:
+        description: 'YouTube URL 3 (optional)'
+        required: false
+        type: string
+      youtube_url_4:
+        description: 'YouTube URL 4 (optional)'
+        required: false
+        type: string
+      youtube_url_5:
+        description: 'YouTube URL 5 (optional)'
+        required: false
+        type: string
+      youtube_url_6:
+        description: 'YouTube URL 6 (optional)'
+        required: false
+        type: string
+      youtube_url_7:
+        description: 'YouTube URL 7 (optional)'
+        required: false
+        type: string
+      youtube_url_8:
+        description: 'YouTube URL 8 (optional)'
+        required: false
+        type: string
+      youtube_url_9:
+        description: 'YouTube URL 9 (optional)'
+        required: false
+        type: string
+      youtube_url_10:
+        description: 'YouTube URL 10 (optional)'
+        required: false
+        type: string
+      context_message:
+        description: 'Context/Message about what the article should be about (optional)'
+        required: false
+        type: string
+      output_size:
+        description: 'Output size (SHORT, MEDIUM, LONG)'
+        required: false
+        type: choice
+        options:
+          - SHORT
+          - MEDIUM
+          - LONG
+        default: MEDIUM
+      enable_research:
+        description: 'Enable additional research via Google Search'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install youtube-transcript-api google-genai
+
+      - name: 📝 Generate article from transcripts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python scripts/generate_article.py \
+            --url-1 "${{ inputs.youtube_url_1 }}" \
+            --url-2 "${{ inputs.youtube_url_2 }}" \
+            --url-3 "${{ inputs.youtube_url_3 }}" \
+            --url-4 "${{ inputs.youtube_url_4 }}" \
+            --url-5 "${{ inputs.youtube_url_5 }}" \
+            --url-6 "${{ inputs.youtube_url_6 }}" \
+            --url-7 "${{ inputs.youtube_url_7 }}" \
+            --url-8 "${{ inputs.youtube_url_8 }}" \
+            --url-9 "${{ inputs.youtube_url_9 }}" \
+            --url-10 "${{ inputs.youtube_url_10 }}" \
+            --context "${{ inputs.context_message }}" \
+            --output-size "${{ inputs.output_size }}" \
+            --enable-research "${{ inputs.enable_research }}"
+
+      - name: 📤 Commit and Push Article
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Configure git to use the token for authentication
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          
+          # Add the generated article
+          git add articles/
+          
+          # Check if there are staged changes before committing
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "Add generated article from YouTube transcripts"
+            git push origin HEAD:${{ github.ref_name }}
+          fi
