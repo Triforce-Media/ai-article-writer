@@ -94,21 +94,18 @@ jobs:
           # Create virtual environment
           $PYTHON_CMD -m venv venv
           
-          # Activate venv and upgrade pip
-          source venv/bin/activate
-          python -m pip install --upgrade pip
+          # Activate venv and upgrade pip (use venv's python directly)
+          ./venv/bin/python -m pip install --upgrade pip
 
       - name: 📦 Install dependencies
         run: |
-          source venv/bin/activate
-          pip install -r requirements.txt
+          ./venv/bin/pip install -r requirements.txt
 
       - name: 📝 Generate article from transcripts
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          source venv/bin/activate
-          python scripts/generate_article.py \
+          ./venv/bin/python scripts/generate_article.py \
             --url-1 "${{ inputs.youtube_url_1 }}" \
             --url-2 "${{ inputs.youtube_url_2 }}" \
             --url-3 "${{ inputs.youtube_url_3 }}" \
